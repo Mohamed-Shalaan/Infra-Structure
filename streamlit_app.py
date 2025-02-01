@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 # Backend Functions
 def calculate_sleep_time(wake_up_time, bedtime):
@@ -20,9 +20,13 @@ def calculate_free_slots(fixed_obligations, wake_up_time, bedtime):
     fixed_obligations.sort()  # Sort by start time
     previous_end = wake_up_time
     for obligation in fixed_obligations:
-        if obligation[0] > previous_end:
-            free_slots.append((previous_end, obligation[0]))
-        previous_end = obligation[1]
+        # Convert obligation times to datetime.datetime using today's date
+        obligation_start = datetime.combine(datetime.today(), obligation[0])
+        obligation_end = datetime.combine(datetime.today(), obligation[1])
+        
+        if obligation_start > previous_end:
+            free_slots.append((previous_end, obligation_start))
+        previous_end = obligation_end
     if previous_end < bedtime:
         free_slots.append((previous_end, bedtime))
     return free_slots
@@ -38,8 +42,8 @@ st.title("Personalized Daily/Weekly Schedule Planner")
 
 # User Inputs
 st.sidebar.header("User Inputs")
-wake_up_time = st.sidebar.time_input("Wake-up Time", datetime.strptime("07:00", "%H:%M"))
-bedtime = st.sidebar.time_input("Bedtime", datetime.strptime("22:00", "%H:%M"))
+wake_up_time = st.sidebar.time_input("Wake-up Time", time(7, 0))
+bedtime = st.sidebar.time_input("Bedtime", time(22, 0))
 num_meals = st.sidebar.number_input("Number of Meals", min_value=1, max_value=6, value=3)
 workout_duration = st.sidebar.number_input("Workout Duration (minutes)", min_value=15, max_value=120, value=60)
 
@@ -52,9 +56,11 @@ for i in range(num_obligations):
     end_time = st.sidebar.time_input(f"Obligation {i+1} End Time", key=f"end_{i}")
     fixed_obligations.append((start_time, end_time))
 
-# Calculate Schedule
+# Convert wake_up_time and bedtime to datetime.datetime
 wake_up_time = datetime.combine(datetime.today(), wake_up_time)
 bedtime = datetime.combine(datetime.today(), bedtime)
+
+# Calculate Schedule
 wake_up_time, bedtime = calculate_sleep_time(wake_up_time, bedtime)
 meal_times = schedule_meals(wake_up_time, bedtime, num_meals)
 free_slots = calculate_free_slots(fixed_obligations, wake_up_time, bedtime)
